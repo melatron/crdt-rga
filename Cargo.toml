@@ -1,0 +1,15 @@
+[package]
+name = "crdt-rga"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+crossbeam-skiplist = "0.1"
+parking_lot = "0.12"
+
+[dev-dependencies]
+criterion = "0.5"
+
+[[bench]]
+name = "rga_performance"
+harness = false
