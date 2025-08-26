@@ -121,6 +121,15 @@
                     maxlength="1"
                     disabled
                 />
+                <input
+                    type="number"
+                    id="positionInput"
+                    placeholder="Position (0=start)"
+                    min="0"
+                    value="0"
+                    disabled
+                    style="max-width: 150px"
+                />
                 <button id="insertBtn" onclick="insertChar()" disabled>
                     Insert Character
                 </button>
@@ -153,6 +162,7 @@
             const statusEl = document.getElementById("status");
             const messagesEl = document.getElementById("messages");
             const charInput = document.getElementById("charInput");
+            const positionInput = document.getElementById("positionInput");
             const connectBtn = document.getElementById("connectBtn");
             const disconnectBtn = document.getElementById("disconnectBtn");
             const insertBtn = document.getElementById("insertBtn");
@@ -176,6 +186,7 @@
                 connectBtn.disabled = connected;
                 disconnectBtn.disabled = !connected;
                 charInput.disabled = !connected;
+                positionInput.disabled = !connected;
                 insertBtn.disabled = !connected;
                 getContentBtn.disabled = !connected;
 
@@ -216,10 +227,15 @@
                             ) {
                                 documentContent.textContent =
                                     data.content || "(empty document)";
-                                addMessage(
-                                    `Document updated: "${data.content}"`,
-                                    "received",
-                                );
+
+                                let message = `Document updated: "${data.content}"`;
+                                if (data.position !== undefined) {
+                                    message += ` (inserted at position ${data.position})`;
+                                }
+                                addMessage(message, "received");
+
+                                // Update position input to end of document
+                                positionInput.max = (data.content || "").length;
                             } else {
                                 addMessage(
                                     `Received: ${event.data}`,
@@ -263,18 +279,22 @@
 
             function insertChar() {
                 const char = charInput.value.trim();
+                const position = parseInt(positionInput.value) || 0;
                 if (!char || !socket || socket.readyState !== WebSocket.OPEN)
                     return;
 
                 const operation = {
                     type: "insert",
                     character: char,
-                    after_id: "start", // For now, always insert at start
+                    position: position,
                 };
 
                 socket.send(JSON.stringify(operation));
-                addMessage(`Insert: "${char}"`, "sent");
+                addMessage(`Insert: "${char}" at position ${position}`, "sent");
                 charInput.value = "";
+
+                // Increment position for next insertion
+                positionInput.value = position + 1;
             }
 
             function getContent() {

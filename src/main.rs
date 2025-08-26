@@ -14,7 +14,7 @@ mod crdt;
 mod server;
 
 use crdt::RGA;
-use server::{AppState, create_router};
+use server::{create_router, websocket::AppState};
 
 #[tokio::main]
 async fn main() {

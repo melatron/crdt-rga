@@ -4,6 +4,7 @@
 //! HTTP endpoints for interacting with the RGA CRDT.
 
 pub mod routes;
+pub mod websocket;
 
 // Re-export main server functionality
 pub use routes::*;
