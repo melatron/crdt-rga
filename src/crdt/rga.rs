@@ -7,8 +7,8 @@ use crossbeam_skiplist::SkipMap;
 use parking_lot::RwLock;
 use std::sync::Arc;
 
-use crate::node::Node;
-use crate::types::{LamportClock, LamportTimestamp, ReplicaId, UniqueId};
+use crate::crdt::node::Node;
+use crate::crdt::types::{LamportClock, LamportTimestamp, ReplicaId, UniqueId};
 
 /// The Replicated Growable Array (RGA) CRDT.
 ///

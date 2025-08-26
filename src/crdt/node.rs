@@ -3,7 +3,7 @@
 //! This module contains the Node struct which represents individual characters
 //! in the RGA, along with sentinel constants used to mark document boundaries.
 
-use crate::types::UniqueId;
+use crate::crdt::types::UniqueId;
 
 /// Special sentinel characters that mark the beginning and end of the document.
 /// These are fixed points of reference for all replicas.
@@ -126,7 +126,7 @@ impl Ord for Node {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::UniqueId;
+    use crate::crdt::types::UniqueId;
 
     #[test]
     fn test_node_creation() {

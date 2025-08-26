@@ -8,7 +8,7 @@
 //!
 //! - **Conflict-free**: Concurrent operations can be applied in any order and will converge
 //! - **Causally consistent**: Operations maintain causal relationships through Lamport timestamps
-//! - **Efficient**: Uses B-tree for O(log n) operations
+//! - **Efficient**: Uses SkipMap for O(log n) operations
 //! - **Tombstone-based deletion**: Supports safe deletion with eventual consistency
 //!
 //! ## Example
@@ -21,11 +21,8 @@
 //! println!("Content: {}", rga.to_string());
 //! ```
 
-pub mod node;
-pub mod rga;
-pub mod types;
+pub mod crdt;
 
-// Re-export the main public API
-pub use node::{Node, SENTINEL_END_CHAR, SENTINEL_START_CHAR};
-pub use rga::RGA;
-pub use types::{LamportTimestamp, ReplicaId, UniqueId};
+// Re-export the main public API from the CRDT module
+pub use crdt::{LamportClock, LamportTimestamp, ReplicaId, UniqueId};
+pub use crdt::{Node, RGA, SENTINEL_END_CHAR, SENTINEL_START_CHAR};
