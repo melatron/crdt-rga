@@ -4,14 +4,17 @@
 //! using the Axum web framework.
 
 use std::net::SocketAddr;
+use std::sync::Arc;
 use tokio;
+use tokio::sync::RwLock;
 use tracing::{Level, info};
 use tracing_subscriber;
 
 mod crdt;
 mod server;
 
-use server::create_router;
+use crdt::RGA;
+use server::{AppState, create_router};
 
 #[tokio::main]
 async fn main() {
@@ -20,24 +23,25 @@ async fn main() {
 
     info!("Starting RGA CRDT Axum server...");
 
+    // Create shared RGA state (replica ID = 1 for now)
+    let rga = RGA::new(1);
+    let state: AppState = Arc::new(RwLock::new(rga));
+
     // Build our application with routes from the server module
-    let app = create_router();
+    let app = create_router().with_state(state);
 
     // Define the address to bind to
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
 
     info!("Server listening on http://{}", addr);
     info!("Available endpoints:");
-    info!("  GET  /        - Hello message");
     info!("  GET  /health  - Health check");
-    info!("  POST /messages - Create message");
+    info!("  GET  /ws      - WebSocket for collaborative editing");
     info!("");
     info!("Try these commands:");
-    info!("  curl http://localhost:3000/");
     info!("  curl http://localhost:3000/health");
-    info!(
-        "  curl -X POST http://localhost:3000/messages -H 'Content-Type: application/json' -d '{{\"content\":\"Hello World\"}}'"
-    );
+    info!("  # Connect to WebSocket: ws://localhost:3000/ws");
+    info!("  # Open frontend/index.html to test collaborative editing");
 
     // Run the server
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();

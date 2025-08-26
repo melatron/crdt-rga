@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>RGA CRDT WebSocket Test Client</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                max-width: 800px;
+                margin: 20px auto;
+                padding: 20px;
+                background-color: #f5f5f5;
+            }
+            .container {
+                background: white;
+                padding: 20px;
+                border-radius: 8px;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            }
+            .status {
+                padding: 10px;
+                border-radius: 4px;
+                margin-bottom: 20px;
+                font-weight: bold;
+            }
+            .connected {
+                background-color: #d4edda;
+                color: #155724;
+            }
+            .disconnected {
+                background-color: #f8d7da;
+                color: #721c24;
+            }
+            .connecting {
+                background-color: #fff3cd;
+                color: #856404;
+            }
+
+            .input-group {
+                display: flex;
+                margin-bottom: 20px;
+                gap: 10px;
+            }
+            input[type="text"] {
+                flex: 1;
+                padding: 10px;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                font-size: 14px;
+            }
+            button {
+                padding: 10px 20px;
+                background-color: #007bff;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 14px;
+            }
+            button:hover {
+                background-color: #0056b3;
+            }
+            button:disabled {
+                background-color: #6c757d;
+                cursor: not-allowed;
+            }
+
+            .messages {
+                height: 300px;
+                overflow-y: auto;
+                border: 1px solid #ddd;
+                padding: 10px;
+                background-color: #f8f9fa;
+                border-radius: 4px;
+                font-family: monospace;
+                font-size: 12px;
+            }
+            .message {
+                margin-bottom: 5px;
+                padding: 2px 0;
+            }
+            .message.sent {
+                color: #007bff;
+            }
+            .message.received {
+                color: #28a745;
+            }
+            .message.system {
+                color: #6c757d;
+                font-style: italic;
+            }
+
+            h1 {
+                color: #333;
+                text-align: center;
+                margin-bottom: 30px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>🦀 RGA CRDT Collaborative Editor</h1>
+
+            <div id="status" class="status disconnected">
+                Disconnected - Click Connect to start
+            </div>
+
+            <div class="input-group">
+                <button id="connectBtn" onclick="connect()">Connect</button>
+                <button id="disconnectBtn" onclick="disconnect()" disabled>
+                    Disconnect
+                </button>
+            </div>
+
+            <div class="input-group">
+                <input
+                    type="text"
+                    id="charInput"
+                    placeholder="Enter a single character..."
+                    maxlength="1"
+                    disabled
+                />
+                <button id="insertBtn" onclick="insertChar()" disabled>
+                    Insert Character
+                </button>
+                <button id="getContentBtn" onclick="getContent()" disabled>
+                    Get Content
+                </button>
+            </div>
+
+            <div style="margin-bottom: 20px">
+                <strong>Document Content:</strong>
+                <div
+                    id="documentContent"
+                    style="
+                        padding: 10px;
+                        border: 1px solid #ddd;
+                        background: #f8f9fa;
+                        font-family: monospace;
+                        min-height: 40px;
+                    "
+                >
+                    (empty document)
+                </div>
+            </div>
+
+            <div class="messages" id="messages"></div>
+        </div>
+
+        <script>
+            let socket = null;
+            const statusEl = document.getElementById("status");
+            const messagesEl = document.getElementById("messages");
+            const charInput = document.getElementById("charInput");
+            const connectBtn = document.getElementById("connectBtn");
+            const disconnectBtn = document.getElementById("disconnectBtn");
+            const insertBtn = document.getElementById("insertBtn");
+            const getContentBtn = document.getElementById("getContentBtn");
+            const documentContent = document.getElementById("documentContent");
+
+            function addMessage(text, type = "system") {
+                const messageEl = document.createElement("div");
+                messageEl.className = `message ${type}`;
+                messageEl.textContent = `[${new Date().toLocaleTimeString()}] ${text}`;
+                messagesEl.appendChild(messageEl);
+                messagesEl.scrollTop = messagesEl.scrollHeight;
+            }
+
+            function updateStatus(status, className) {
+                statusEl.textContent = status;
+                statusEl.className = `status ${className}`;
+            }
+
+            function updateUI(connected) {
+                connectBtn.disabled = connected;
+                disconnectBtn.disabled = !connected;
+                charInput.disabled = !connected;
+                insertBtn.disabled = !connected;
+                getContentBtn.disabled = !connected;
+
+                if (connected) {
+                    charInput.focus();
+                }
+            }
+
+            function connect() {
+                if (socket) return;
+
+                updateStatus(
+                    "Connecting to ws://localhost:3000/ws...",
+                    "connecting",
+                );
+                addMessage("Attempting to connect...");
+
+                try {
+                    socket = new WebSocket("ws://localhost:3000/ws");
+
+                    socket.onopen = function () {
+                        updateStatus(
+                            "Connected to RGA CRDT Server",
+                            "connected",
+                        );
+                        updateUI(true);
+                        addMessage("WebSocket connection established!");
+                    };
+
+                    socket.onmessage = function (event) {
+                        try {
+                            const data = JSON.parse(event.data);
+
+                            if (
+                                data.type === "init" ||
+                                data.type === "update" ||
+                                data.type === "content"
+                            ) {
+                                documentContent.textContent =
+                                    data.content || "(empty document)";
+                                addMessage(
+                                    `Document updated: "${data.content}"`,
+                                    "received",
+                                );
+                            } else {
+                                addMessage(
+                                    `Received: ${event.data}`,
+                                    "received",
+                                );
+                            }
+                        } catch (e) {
+                            addMessage(`Received: ${event.data}`, "received");
+                        }
+                    };
+
+                    socket.onclose = function () {
+                        updateStatus("Connection closed", "disconnected");
+                        updateUI(false);
+                        addMessage("Connection closed");
+                        socket = null;
+                    };
+
+                    socket.onerror = function (error) {
+                        updateStatus("Connection error", "disconnected");
+                        updateUI(false);
+                        addMessage(
+                            `Error: ${error.message || "Connection failed"}`,
+                        );
+                        socket = null;
+                    };
+                } catch (error) {
+                    updateStatus("Connection failed", "disconnected");
+                    updateUI(false);
+                    addMessage(`Failed to connect: ${error.message}`);
+                    socket = null;
+                }
+            }
+
+            function disconnect() {
+                if (socket) {
+                    socket.close();
+                    socket = null;
+                }
+            }
+
+            function insertChar() {
+                const char = charInput.value.trim();
+                if (!char || !socket || socket.readyState !== WebSocket.OPEN)
+                    return;
+
+                const operation = {
+                    type: "insert",
+                    character: char,
+                    after_id: "start", // For now, always insert at start
+                };
+
+                socket.send(JSON.stringify(operation));
+                addMessage(`Insert: "${char}"`, "sent");
+                charInput.value = "";
+            }
+
+            function getContent() {
+                if (!socket || socket.readyState !== WebSocket.OPEN) return;
+
+                const operation = { type: "get_content" };
+                socket.send(JSON.stringify(operation));
+                addMessage("Requested content", "sent");
+            }
+
+            // Handle Enter key in input
+            charInput.addEventListener("keypress", function (e) {
+                if (e.key === "Enter") {
+                    insertChar();
+                }
+            });
+
+            // Initial UI state
+            updateUI(false);
+            addMessage(
+                "RGA CRDT client loaded. Click Connect to start collaborative editing.",
+            );
+        </script>
+    </body>
+</html>
